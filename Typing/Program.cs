@@ -513,6 +513,7 @@ namespace Typing
             string json = System.IO.File.ReadAllText(filepath);
             return FromJSON<T>(json);
         }
+
     }
 
     /// <summary>1つの単語について管理するクラス</summary>
@@ -1011,6 +1012,7 @@ namespace Typing
             // Console.WriteLine("正確性 : {0}%", (double)f_len / act_len * 100);
             // Console.WriteLine("入力時間 : {0} tps: {1}", game.sumTime().TotalSeconds, f_len / game.sumTime().TotalSeconds);
 
+
             Console.WriteLine("過去の記録");
             for (int i = 0; i < game_history.GameHistory.Count; i++)
             {
@@ -1019,6 +1021,8 @@ namespace Typing
                 var score = f_len / game_history.GameHistory[i].sumTime().TotalMinutes * f_len / act_len * 10;
                 Console.WriteLine("{0} : score: {1}", dt.ToString("F"), score);
             }
+
+            // ここからndjson
 
             TypeGame[] typeGames = new TypeGame[] { game, game };
 
