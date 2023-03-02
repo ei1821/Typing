@@ -407,7 +407,7 @@ namespace Typing
 
         });
         /// <summary>んを入力するときにnではなくnnと入力しなければならなくなるかな文字の配列 </summary>
-        public static readonly ReadOnlyCollection<string> must_nn_list = Array.AsReadOnly(new string[] { "な", "に", "ぬ", "ね", "の", "にゃ", "にぃ", "にゅ", "にぇ", "にょ", "や", "ゆ", "よ", "っや", "っゆ", "っよ" });
+        public static readonly ReadOnlyCollection<string> must_nn_list = Array.AsReadOnly(new string[] {"あ", "い", "う", "え", "お", "な", "に", "ぬ", "ね", "の", "にゃ", "にぃ", "にゅ", "にぇ", "にょ", "や", "ゆ", "よ", "っや", "っゆ", "っよ" });
         /// <summary>問題文長上限</summary>
         public const int MAX_SENTENCE_LEN = 8192;
 
@@ -513,6 +513,7 @@ namespace Typing
             string json = System.IO.File.ReadAllText(filepath);
             return FromJSON<T>(json);
         }
+
     }
 
     /// <summary>1つの単語について管理するクラス</summary>
@@ -746,7 +747,7 @@ namespace Typing
                     }
                     else
                     {
-                        current[i].idx++;  //= new TypeWord(current[i].kana, current[i].romaji, current[i].idx + 1);
+                        current[i].idx++; 
                     }
                 }
             }
@@ -1011,6 +1012,7 @@ namespace Typing
             // Console.WriteLine("正確性 : {0}%", (double)f_len / act_len * 100);
             // Console.WriteLine("入力時間 : {0} tps: {1}", game.sumTime().TotalSeconds, f_len / game.sumTime().TotalSeconds);
 
+
             Console.WriteLine("過去の記録");
             for (int i = 0; i < game_history.GameHistory.Count; i++)
             {
@@ -1019,6 +1021,8 @@ namespace Typing
                 var score = f_len / game_history.GameHistory[i].sumTime().TotalMinutes * f_len / act_len * 10;
                 Console.WriteLine("{0} : score: {1}", dt.ToString("F"), score);
             }
+
+            // ここからndjson
 
             TypeGame[] typeGames = new TypeGame[] { game, game };
 
