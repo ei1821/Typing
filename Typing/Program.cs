@@ -412,6 +412,17 @@ namespace Typing
         public const int MAX_SENTENCE_LEN = 8192;
 
         /// <summary>
+        /// cが半角文字か判定する
+        /// </summary>
+        /// <param name="c">文字</param>
+        /// <returns>cが半角文字であればTrueを返す</returns>
+        public static bool ifHalfWidth(char c)
+        {
+            return c is >= (char)0x20 and <= (char)0x7F;
+        }
+
+
+        /// <summary>
         /// 特殊キー以外の文字を入力受付する
         /// </summary>
         /// <returns></returns>
@@ -511,9 +522,9 @@ namespace Typing
         public readonly string romaji;
         public int idx;
 
-        public TypeWord(string word, string romaji, int idx = 0)
+        public TypeWord(string kana, string romaji, int idx = 0)
         {
-            this.kana = word;
+            this.kana = kana;
             this.romaji = romaji;
             this.idx = idx;
         }
@@ -545,10 +556,6 @@ namespace Typing
 
         Stopwatch sw = new();
 
-        List<string> shortest_kana_path, shortest_romaji_path;
-        List<int> shortest_path_nodes;
-        int s_path_idx = 0;
-
         public TypeSentence(string Sentence, string Text = "")
         {
             this.Sentence = Sentence;    // 問題文
@@ -561,7 +568,7 @@ namespace Typing
             {
                 edge[l] = new List<TypeWord>();
                 // 半角文字を追加
-                if (Sentence[l] is >= (char)0x20 and <= (char)0x7F)
+                if (TypeUtils.ifHalfWidth(Sentence[l]))
                 {
                     edge[l].Add(new TypeWord(Sentence[l].ToString(), Sentence[l].ToString()));
                 }
@@ -569,14 +576,16 @@ namespace Typing
                 {
                     while (r <= Sentence.Length)
                     {
-                        string moji = Sentence[l..r];
-                        if (TypeUtils.kana2romaList.TryGetValue(moji, out string[]? val) == false) break;
+                        string kana_substr = Sentence[l..r];
+                        if (TypeUtils.kana2romaList.TryGetValue(kana_substr, out string[]? val) == false) break;
                         foreach (var romaji in val)
                         {
-                            edge[l].Add(new TypeWord(moji, romaji));
+                            edge[l].Add(new TypeWord(kana_substr, romaji));
                         }
                         r++;
                     }
+                    // 都合のいい順番に並べる
+                    edge[l].Sort((x, y) => x.kana.Length == y.kana.Length ? x.romaji.Length - y.romaji.Length : y.kana.Length - x.kana.Length);
                 }
 
             }
@@ -593,40 +602,18 @@ namespace Typing
             prev_romaji = "";
             this.Text = Text;
             if (Text == "") this.Text = this.Sentence;
-
-
-            shortest_kana_path = new();
-            shortest_romaji_path = new();
-            shortest_path_nodes = new();
-            var v = 0;
-            while (v < Sentence.Length)
-            {
-                shortest_path_nodes.Add(v);
-                int max_i = 0;
-                for (int i = 0; i < edge[v].Count; i++)
-                {
-                    if (edge[v][max_i].kana.Length < edge[v][i].kana.Length) max_i = i;
-                }
-                shortest_kana_path.Add(edge[v][max_i].kana);
-                shortest_romaji_path.Add(edge[v][max_i].romaji);
-                v += edge[v][max_i].kana.Length;
-            }
-
-            // 番兵
-            shortest_path_nodes.Add(Sentence.Length);
-
         }
 
 
         /// <summary>
-        /// _start文字目から入力される可能性のある単語群の生成
+        /// _start文字目から入力される可能性のある単語群の生成(非破壊的)
         /// </summary>
         /// <param name="_start">入力する文字の添え字</param>
         /// <returns>候補のリストを返す</returns>
         public List<TypeWord> MakedCandidate(int _start) => MC(new(), _start);
 
         /// <summary>
-        /// _start文字目から入力される可能性のある単語群の生成
+        /// _start文字目から入力される可能性のある単語群の生成(破壊的)
         /// </summary>
         /// <param name="_start">入力する文字の添え字</param>
         /// <returns></returns>
@@ -665,21 +652,11 @@ namespace Typing
             _next += idx;
             romaji.Append(tmp);
 
-            while (_next < shortest_path_nodes[1])
+            while (_next < Sentence.Length)
             {
                 var v = edge[_next][0];
-                for (int i = 1; i < edge[_next].Count; ++i)
-                {
-                    if (v.kana.Length < edge[_next][i].kana.Length)
-                        v = edge[_next][i];
-                }
                 _next += v.kana.Length;
                 romaji.Append(v.romaji);
-            }
-
-            for (int i = 1; i < shortest_romaji_path.Count; ++i)
-            {
-                romaji.Append(shortest_romaji_path[i]);
             }
 
             return romaji.ToString();
@@ -758,22 +735,12 @@ namespace Typing
                         prev_romaji = current[i].romaji;
                         idx += current[i].kana.Length;
 
-                        // 入力候補文字列から入力した部分を削除
-                        shortest_kana_path[0] = shortest_kana_path[0].Remove(0, current[i].kana.Length);
-                        if (shortest_kana_path[0].Length == 0)
-                        {
-                            shortest_kana_path.RemoveAt(0);
-                            shortest_romaji_path.RemoveAt(0);
-                            shortest_path_nodes.RemoveAt(0);
-                        }
-
                         // 全文字入力した場合
                         if (idx == Sentence.Length)
                         {
                             break;
                         }
 
-                        current.Clear();
                         MakeCandidate(idx);
                         break;
                     }
