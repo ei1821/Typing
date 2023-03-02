@@ -407,7 +407,7 @@ namespace Typing
 
         });
         /// <summary>んを入力するときにnではなくnnと入力しなければならなくなるかな文字の配列 </summary>
-        public static readonly ReadOnlyCollection<string> must_nn_list = Array.AsReadOnly(new string[] { "な", "に", "ぬ", "ね", "の", "にゃ", "にぃ", "にゅ", "にぇ", "にょ", "や", "ゆ", "よ", "っや", "っゆ", "っよ" });
+        public static readonly ReadOnlyCollection<string> must_nn_list = Array.AsReadOnly(new string[] {"あ", "い", "う", "え", "お", "な", "に", "ぬ", "ね", "の", "にゃ", "にぃ", "にゅ", "にぇ", "にょ", "や", "ゆ", "よ", "っや", "っゆ", "っよ" });
         /// <summary>問題文長上限</summary>
         public const int MAX_SENTENCE_LEN = 8192;
 
@@ -746,7 +746,7 @@ namespace Typing
                     }
                     else
                     {
-                        current[i].idx++;  //= new TypeWord(current[i].kana, current[i].romaji, current[i].idx + 1);
+                        current[i].idx++; 
                     }
                 }
             }
