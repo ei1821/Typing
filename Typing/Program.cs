@@ -959,6 +959,14 @@ namespace Typing
             GameHistory = gameHistory.ToList();
             GameDatetime = gameDatetime.ToList();
         }
+
+
+        public (TypeGame, DateTime) this[int i]
+        {
+            get { return (GameHistory[i], GameDatetime[i]); }
+            set { (GameHistory[i], GameDatetime[i]) = value; }
+        }
+
     }
 
 
