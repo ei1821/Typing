@@ -912,6 +912,15 @@ namespace Typing
             }
             return (act_sum, f_sum);
         }
+        public int getScore()
+        {
+            int act_len, f_len;
+            (act_len, f_len) = input_str_length();
+            var score = f_len / sumTime().TotalMinutes * f_len / act_len * 10;
+
+            return (int)score;
+        }
+
 
     }
     class GetTypeGame : IEquatable<GetTypeGame>
@@ -950,6 +959,14 @@ namespace Typing
             GameHistory = gameHistory.ToList();
             GameDatetime = gameDatetime.ToList();
         }
+
+
+        public (TypeGame, DateTime) this[int i]
+        {
+            get { return (GameHistory[i], GameDatetime[i]); }
+            set { (GameHistory[i], GameDatetime[i]) = value; }
+        }
+
     }
 
 
@@ -1006,9 +1023,7 @@ namespace Typing
 
 
             Console.WriteLine("");
-            int act_len, f_len;
-            (act_len, f_len) = game.input_str_length();
-            Console.WriteLine("スコア : {0}", f_len / game.sumTime().TotalMinutes * f_len / act_len * 10);
+            Console.WriteLine("スコア : {0}",  game.getScore());
             // Console.WriteLine("正確性 : {0}%", (double)f_len / act_len * 100);
             // Console.WriteLine("入力時間 : {0} tps: {1}", game.sumTime().TotalSeconds, f_len / game.sumTime().TotalSeconds);
 
@@ -1017,9 +1032,7 @@ namespace Typing
             for (int i = 0; i < game_history.GameHistory.Count; i++)
             {
                 DateTime dt = game_history.GameDatetime[i];
-                (act_len, f_len) = game_history.GameHistory[i].input_str_length();
-                var score = f_len / game_history.GameHistory[i].sumTime().TotalMinutes * f_len / act_len * 10;
-                Console.WriteLine("{0} : score: {1}", dt.ToString("F"), score);
+                Console.WriteLine("{0} : score: {1}", dt.ToString("F"), game_history.GameHistory[i].getScore());
             }
 
             // ここからndjson
