@@ -10,9 +10,11 @@ using System.Security;
 using System.Collections.ObjectModel;
 using System.Text;
 using System.Buffers;
+using System.Text.Json.Serialization;
 
 namespace Typing
 {
+
     /// <summary> タイピングに関する諸情報を管理するクラス</summary>
     static class TypeUtils
     {
@@ -407,7 +409,7 @@ namespace Typing
 
         });
         /// <summary>んを入力するときにnではなくnnと入力しなければならなくなるかな文字の配列 </summary>
-        public static readonly ReadOnlyCollection<string> must_nn_list = Array.AsReadOnly(new string[] {"あ", "い", "う", "え", "お", "な", "に", "ぬ", "ね", "の", "にゃ", "にぃ", "にゅ", "にぇ", "にょ", "や", "ゆ", "よ", "っや", "っゆ", "っよ" });
+        public static readonly ReadOnlyCollection<string> must_nn_list = Array.AsReadOnly(new string[] { "あ", "い", "う", "え", "お", "な", "に", "ぬ", "ね", "の", "にゃ", "にぃ", "にゅ", "にぇ", "にょ", "や", "ゆ", "よ", "っや", "っゆ", "っよ" });
         /// <summary>問題文長上限</summary>
         public const int MAX_SENTENCE_LEN = 8192;
 
@@ -517,7 +519,7 @@ namespace Typing
     }
 
     /// <summary>1つの単語について管理するクラス</summary>
-    class TypeWord
+    public class TypeWord
     {
         public readonly string kana;
         public readonly string romaji;
@@ -534,7 +536,7 @@ namespace Typing
     /// <summary>
     /// 1つの入力お題について管理するクラス
     /// </summary>
-    class TypeSentence
+    public class TypeSentence
     {
         /// <summary>お題の文章</summary>
         public string Sentence { get; set; }
@@ -553,7 +555,7 @@ namespace Typing
         /// <summary>入力中の文字番号</summary>
         public int idx;
 
-        string prev_romaji;
+        string prev_romaji, prev_kana;
 
         Stopwatch sw = new();
 
@@ -601,6 +603,7 @@ namespace Typing
 
             idx = 0;
             prev_romaji = "";
+            prev_kana = "";
             this.Text = Text;
             if (Text == "") this.Text = this.Sentence;
         }
@@ -634,7 +637,6 @@ namespace Typing
         /// 今後入力されるローマ字列を返す
         /// </summary>
         /// <returns></returns> 
-        //---------------------------------------stringbuilder使えそう
         public string InputCandStr()
         {
             StringBuilder romaji = new();
@@ -699,10 +701,11 @@ namespace Typing
             Acturally_entered_string += c;
 
             // "ん"のnn入力を許容する
-            if (c == 'n' && prev_romaji == "n")
+            if (c == 'n' && prev_kana == "ん" && prev_romaji == "n")
             {
                 Formally_entered_string += c;
                 prev_romaji = "";
+                prev_kana = "";
                 return true;
             }
 
@@ -734,6 +737,7 @@ namespace Typing
                     if (current[i].romaji.Length == current[i].idx + 1)
                     {
                         prev_romaji = current[i].romaji;
+                        prev_kana = current[i].kana;
                         idx += current[i].kana.Length;
 
                         // 全文字入力した場合
@@ -747,7 +751,7 @@ namespace Typing
                     }
                     else
                     {
-                        current[i].idx++; 
+                        current[i].idx++;
                     }
                 }
             }
@@ -765,29 +769,11 @@ namespace Typing
             return TimeSpanList.Aggregate((p, x) => p + x);
         }
 
-    }
-    class GetTypeSentence : IEquatable<GetTypeSentence>
-    {
-        /// <summary>お題の文章</summary>
-        public string Sentence { get; set; } = "";
-        /// <summary>表示する文章</summary>
-        public string Text { get; set; } = "";
-        /// <summary> Sentenceを入力するための正式な入力ローマ字列 </summary>
-        public string Formally_entered_string { get; set; } = "";
-        /// <summary>実際の入力ローマ字列</summary>
-        public string Acturally_entered_string { get; set; } = "";
 
-        public bool Equals(GetTypeSentence? other)
-        {
-            return Sentence == other?.Sentence &&
-            Text == other?.Text &&
-            Formally_entered_string == other?.Formally_entered_string &&
-            Acturally_entered_string == other?.Acturally_entered_string;
-        }
-        // public List<TimeSpan> TimeSpanList { get; } = new();
+
     }
 
-    class TypeGame
+    public class TypeGame
     {
         public TypeSentence[] Sentences { get; set; }
         /// <summary>入力中の問題番号</summary>
@@ -808,8 +794,26 @@ namespace Typing
             get { return Sentences.Length; }
         }
 
+        /// <summary>
+        /// ゲームの開始時間
+        /// Start()時にセット
+        /// </summary>
+        public DateTime PlayStart { get; set; }
+
         public bool is_sentence_moving = true;
 
+        /*
+        public TypeGame(Tuple<string, string>[] textList)
+        {
+            Sentences = new TypeSentence[textList.Length];
+            for(int i = 0; i < Sentences.Length; i++)
+            {
+                Sentences[i] = new TypeSentence(textList[i].Item2, textList[i].Item1);
+            }
+        }
+        */
+
+        [JsonConstructor]
         public TypeGame(int n = 10)
         {
             Sentences = new TypeSentence[n];
@@ -841,6 +845,7 @@ namespace Typing
         public void Start()
         {
             Sentences[0].TimerStart();
+            PlayStart = DateTime.Now;
         }
         void Next()
         {
@@ -912,6 +917,8 @@ namespace Typing
             }
             return (act_sum, f_sum);
         }
+
+
         public int getScore()
         {
             int act_len, f_len;
@@ -921,24 +928,7 @@ namespace Typing
             return (int)score;
         }
 
-
     }
-    class GetTypeGame : IEquatable<GetTypeGame>
-    {
-        public GetTypeSentence[] Sentences { get; set; } = Array.Empty<GetTypeSentence>();
-
-        public bool Equals(GetTypeGame? other)
-        {
-            if (other is null) return false;
-            return Sentences.SequenceEqual(other.Sentences);
-        }
-
-        public int N
-        {
-            get { return Sentences.Length; }
-        }
-    }
-
     class TypeFileFormat
     {
         public string Username { get; set; }
@@ -1035,121 +1025,7 @@ namespace Typing
                 Console.WriteLine("{0} : score: {1}", dt.ToString("F"), game_history.GameHistory[i].getScore());
             }
 
-            // ここからndjson
-
-            TypeGame[] typeGames = new TypeGame[] { game, game };
-
-            TypeUtils.Write(typeGames, "a.txt");
-
-            string fn = "b.ndjson";
-            using (Stream stream = new FileStream(fn, FileMode.OpenOrCreate, FileAccess.Write))
-            {
-                // typeGames.ToNDJson(stream, false);
-                var t = typeGames.ToNDJsonAsync(stream);
-                while (!t.IsCompleted)
-                {
-                    Thread.Sleep(1);
-                }
-                Console.WriteLine(t.Status);
-                Console.WriteLine(t.Exception);
-            }
-
-            List<GetTypeGame> tg1 = TypeUtils.FromJSON<List<GetTypeGame>>(File.ReadAllText("a.txt", Encoding.UTF8));
-            List<GetTypeGame> tg2;
-
-            using (Stream stream = new FileStream(fn, FileMode.OpenOrCreate, FileAccess.Read))
-            {
-                tg2 = Extends.FromNDJson(stream);
-            }
-            Console.WriteLine(tg1.SequenceEqual(tg2));
         }
     }
 
-    static class Extends
-    {
-        static readonly byte[] Utf8NewLine = Encoding.UTF8.GetBytes(Environment.NewLine);
-
-        public static void ToNDJson(this IReadOnlyCollection<TypeGame> games, Stream stream, bool leaveOpen = false)
-        {
-            var options = new JsonSerializerOptions
-            {
-                // JavaScriptEncoder.Createでエンコードしない文字を指定するのも可
-                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-            };
-            foreach (TypeGame game in games)
-            {
-                JsonSerializer.Serialize(stream, game, options);
-                stream.Write(Utf8NewLine);
-            }
-            if (!leaveOpen)
-            {
-                stream.Close();
-            }
-        }
-
-        public static async Task ToNDJsonAsync(this IReadOnlyCollection<TypeGame> games, Stream stream, bool leaveOpen = false, CancellationToken ct = default)
-        {
-            var options = new JsonSerializerOptions
-            {
-                // JavaScriptEncoder.Createでエンコードしない文字を指定するのも可
-                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-            };
-            foreach (TypeGame game in games)
-            {
-                await JsonSerializer.SerializeAsync(stream, game, options, ct);
-                await stream.WriteAsync(Utf8NewLine, ct);
-            }
-            if (!leaveOpen)
-            {
-                stream.Close();
-            }
-        }
-
-        public static List<GetTypeGame> FromNDJson(Stream stream)
-        {
-            List<GetTypeGame> games = new();
-
-            byte[] buff = ArrayPool<byte>.Shared.Rent(1024);
-            int index = 0;
-            try
-            {
-                while (true)
-                {
-                    int n = stream.Read(buff.AsSpan(index));
-                    if (n == 0) return games;
-                    Span<byte> readBuff = buff.AsSpan(index, n);
-
-                    int i = readBuff.IndexOf(Utf8NewLine);
-                    if (i == -1)
-                    {
-                        index += readBuff.Length;
-                        byte[] newBuff = ArrayPool<byte>.Shared.Rent(buff.Length * 2);
-                        buff.CopyTo(newBuff.AsSpan());
-                        readBuff = Span<byte>.Empty;
-                        ArrayPool<byte>.Shared.Return(buff);
-                        buff = newBuff;
-                    }
-                    else
-                    {
-                        index += i;
-                        // Console.WriteLine(Encoding.UTF8.GetString(buff.AsSpan(0, index)));
-                        if (JsonSerializer.Deserialize<GetTypeGame>(buff.AsSpan(0, index)) is GetTypeGame game)
-                        {
-                            games.Add(game);
-                        }
-                        else
-                        {
-                            throw new Exception("Json Reading Failed");
-                        }
-                        buff[index..].CopyTo(buff.AsSpan());
-                        index = buff.Length - index;
-                    }
-                }
-            }
-            finally
-            {
-                ArrayPool<byte>.Shared.Return(buff);
-            }
-        }
-    }
 }
